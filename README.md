@@ -1,83 +1,223 @@
 # Leave Management System
 
-A comprehensive leave management system for IST, built with Spring Boot and Google Authentication.
+A comprehensive leave management system built with Spring Boot and React, designed to streamline employee leave requests and approvals according to Rwandan Labor Law (2023).
 
 ## Features
 
-- User Management with Google Authentication
-- Leave Request Management
-- Role-based Access Control
-- RESTful API
-- Swagger Documentation
+### Core Features
+- **Employee Dashboard**
+  - View leave balances
+  - Apply for leave
+  - Track leave history
+  - Upload supporting documents
+  - Calendar integration with public holidays and team leaves
+
+- **Leave Application**
+  - Multiple leave types (PTO, Sick, Compassionate, Maternity)
+  - Full-day/half-day options
+  - Document upload support
+  - Application status tracking
+
+- **Approval Workflow**
+  - Manager/Admin approval process
+  - Email and in-app notifications
+  - Approval/rejection with comments
+
+- **Leave Balance Management**
+  - Auto-accrual (1.66 days/month)
+  - Carry-forward logic (max 5 days)
+  - Manual balance adjustments
+
+- **Admin Panel**
+  - Leave type management
+  - Balance adjustments
+  - Team calendar views
+  - Report generation and export
+
+- **Notifications**
+  - Email notifications
+  - In-app notifications
+  - Real-time status updates
 
 ## Tech Stack
 
+### Backend
 - Java 17
-- Spring Boot 3.2.3
-- Spring Security
+- Spring Boot 3.x
+- Spring Security with JWT
 - Spring Data JPA
 - PostgreSQL
-- JWT Authentication
-- Google OAuth2
-- Swagger/OpenAPI
+- SendGrid for email notifications
+- Microsoft OAuth2 Authentication
+
+### Frontend
+- React
+- Material-UI
+- Redux Toolkit
+- Axios
+- React Router
 
 ## Prerequisites
 
-- Java 17 or higher
-- Maven
-- PostgreSQL
-- Google Cloud Account (for authentication)
+- Docker and Docker Compose
+- Java 17 JDK
+- Node.js 18+
+- npm or yarn
 
-## Environment Variables
+## Quick Start with Docker
 
-```env
-# Database Configuration
-POSTGRES_URL=jdbc:postgresql://localhost:5432/leave_management
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password_here
-
-# JWT Configuration
-JWT_SECRET=your_jwt_secret_key_here
-JWT_EXPIRATION=86400000 # 24 hours
-
-# Google OAuth2 Configuration
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/leave-management.git
+cd leave-management
 ```
 
-## Running the Application
+2. Create environment files:
+```bash
+# Backend (.env)
+cp backend/.env.example backend/.env
+# Frontend (.env)
+cp frontend/.env.example frontend/.env
+```
 
-1. Clone the repository
-2. Configure environment variables
-3. Run `mvn spring-boot:run`
-4. Access the application at `http://localhost:8080`
+3. Update environment variables:
+```bash
+# Backend (.env)
+POSTGRES_URL=jdbc:postgresql://postgres:5432/leave_management
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_secure_password
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRATION=86400000
+SENDGRID_API_KEY=your_sendgrid_key
+SENDGRIS_FROM_EMAIL=your_verified_email
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/oauth2/callback/google
+FRONTEND_URL=http://localhost:4200
+
+# Frontend (.env)
+REACT_APP_API_URL=http://localhost:8080
+REACT_APP_GOOGLE_CLIENT_ID=your_client_id
+```
+
+4. Start the application:
+```bash
+docker-compose up -d
+```
+
+The application will be available at:
+- Frontend: http://localhost:4200
+- Backend API: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui.html
+
+## Manual Setup
+
+### Backend Setup
+
+1. Navigate to backend directory:
+```bash
+cd backend
+```
+
+2. Build the application:
+```bash
+./mvnw clean package
+```
+
+3. Run the application:
+```bash
+java -jar target/leave-management-0.0.1-SNAPSHOT.jar
+```
+
+### Frontend Setup
+
+1. Navigate to frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm start
+```
 
 ## API Documentation
 
-Swagger UI is available at `http://localhost:8080/swagger-ui.html`
+The API documentation is available at:
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
 
-## Project Structure
+## Security Features
 
+- JWT-based authentication
+- Google OAuth2 integration
+- Role-based access control
+- CSRF protection
+- CORS configuration
+
+## Database Schema
+
+The system uses PostgreSQL with the following main tables:
+- users
+- roles
+- leave_types
+- leave_applications
+- leave_balances
+- leave_workflows
+- notifications
+
+## Testing
+
+### Backend Tests
+```bash
+cd backend
+./mvnw test
 ```
-leave-management-system/
-├── src/
-│   └── main/
-│       ├── java/
-│       │   └── com/
-│       │       └── ist/
-│       │           ├── config/
-│       │           ├── common/
-│       │           ├── user_management/
-│       │           └── leave_management/
-│       └── resources/
-└── pom.xml
+
+### Frontend Tests
+```bash
+cd frontend
+npm test
 ```
+
+## Deployment
+
+### Docker Deployment
+1. Build the images:
+```bash
+docker-compose build
+```
+
+2. Push to Docker Hub:
+```bash
+docker push yourusername/leave-management-backend:latest
+docker push yourusername/leave-management-frontend:latest
+```
+
+### Production Deployment
+1. Update environment variables for production
+2. Use HTTPS
+3. Configure proper CORS settings
+4. Set up proper logging
+5. Configure backup strategy
 
 ## Contributing
 
-Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 
-This project is licensed under the IST License. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support, please contact [your-email@example.com] 
