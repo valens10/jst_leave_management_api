@@ -63,7 +63,21 @@ public class LeaveApplicationMapper {
     public LeaveApplicationResponseDto toDto(LeaveApplication leaveApplication) {
         LeaveApplicationResponseDto dto = new LeaveApplicationResponseDto();
         dto.setId(leaveApplication.getId());
-        dto.setUser(leaveApplication.getUser());
+
+        // Map user to DTO
+        LeaveApplicationUserDto userDto = new LeaveApplicationUserDto();
+        User user = leaveApplication.getUser();
+        userDto.setId(user.getId());
+        userDto.setEmail(user.getEmail());
+        userDto.setFirstName(user.getFirstName());
+        userDto.setLastName(user.getLastName());
+        userDto.setProfilePicture(user.getProfilePicture());
+        if (user.getDepartment() != null) {
+            userDto.setDepartmentId(user.getDepartment().getId());
+            userDto.setDepartmentName(user.getDepartment().getName());
+        }
+        dto.setUser(userDto);
+
         dto.setLeaveTypeId(leaveApplication.getLeaveType().getId());
         dto.setLeaveTypeName(leaveApplication.getLeaveType().getName());
         dto.setLeaveType(leaveApplication.getLeaveType());

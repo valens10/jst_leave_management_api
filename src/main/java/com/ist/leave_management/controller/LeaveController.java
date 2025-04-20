@@ -23,6 +23,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +33,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -582,6 +585,229 @@ public class LeaveController {
             logger.error("Error deleting leave", e);
             return ResponseEntity.internalServerError()
                     .body(new MessageResponseDto("An error occurred while deleting the leave application"));
+        }
+    }
+
+    @GetMapping("/department/{departmentId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getLeavesByDepartment(@PathVariable Long departmentId, Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            // Check if the current user is an admin or manager
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            boolean isAdminOrManager = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
+                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
+
+            if (!isAdminOrManager) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("Only admins and managers can view department leaves"));
+            }
+
+            // Get all leave applications for users in the department
+            List<LeaveApplication> applications = leaveApplicationRepository.findByUser_Department_Id(departmentId);
+
+            // Map to DTOs
+            List<LeaveApplicationResponseDto> response = applications.stream()
+                    .map(leaveApplicationMapper::toDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error getting department leaves", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while fetching department leaves"));
+        }
+    }
+
+    @GetMapping("/reports/employee/{userId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getEmployeeReport(
+            @PathVariable Long userId,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
+            Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            // Check if the current user is an admin, manager, or the employee themselves
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            boolean isAdminOrManager = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
+                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
+
+            if (!isAdminOrManager && !currentUser.getId().equals(userId)) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("You can only view your own reports"));
+            }
+
+            List<LeaveApplication> applications;
+            if (startDate != null && endDate != null) {
+                applications = leaveApplicationRepository.findByUserIdAndStartDateBetween(userId, startDate, endDate);
+            } else {
+                applications = leaveApplicationRepository.findByUserId(userId);
+            }
+
+            List<LeaveApplicationResponseDto> response = applications.stream()
+                    .map(leaveApplicationMapper::toDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error generating employee report", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while generating the report"));
+        }
+    }
+
+    @GetMapping("/reports/leave-type/{leaveTypeId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getLeaveTypeReport(
+            @PathVariable Long leaveTypeId,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
+            Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            // Check if the current user is an admin or manager
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            boolean isAdminOrManager = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
+                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
+
+            if (!isAdminOrManager) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("Only admins and managers can view leave type reports"));
+            }
+
+            List<LeaveApplication> applications;
+            if (startDate != null && endDate != null) {
+                applications = leaveApplicationRepository.findByLeaveTypeIdAndStartDateBetween(leaveTypeId, startDate,
+                        endDate);
+            } else {
+                applications = leaveApplicationRepository.findByLeaveTypeId(leaveTypeId);
+            }
+
+            List<LeaveApplicationResponseDto> response = applications.stream()
+                    .map(leaveApplicationMapper::toDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error generating leave type report", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while generating the report"));
+        }
+    }
+
+    @GetMapping("/reports/department/{departmentId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getDepartmentReport(
+            @PathVariable Long departmentId,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
+            Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            // Check if the current user is an admin or manager
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            boolean isAdminOrManager = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
+                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
+
+            if (!isAdminOrManager) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("Only admins and managers can view department reports"));
+            }
+
+            List<LeaveApplication> applications;
+            if (startDate != null && endDate != null) {
+                applications = leaveApplicationRepository.findByUser_Department_IdAndStartDateBetween(departmentId,
+                        startDate, endDate);
+            } else {
+                applications = leaveApplicationRepository.findByUser_Department_Id(departmentId);
+            }
+
+            List<LeaveApplicationResponseDto> response = applications.stream()
+                    .map(leaveApplicationMapper::toDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error generating department report", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while generating the report"));
+        }
+    }
+
+    @GetMapping("/reports/summary")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getSummaryReport(
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
+            Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            // Check if the current user is an admin or manager
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            boolean isAdminOrManager = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
+                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
+
+            if (!isAdminOrManager) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("Only admins and managers can view summary reports"));
+            }
+
+            List<LeaveApplication> applications;
+            if (startDate != null && endDate != null) {
+                applications = leaveApplicationRepository.findByStartDateBetween(startDate, endDate);
+            } else {
+                applications = leaveApplicationRepository.findAll();
+            }
+
+            // Group by status
+            Map<LeaveStatus, Long> statusCount = applications.stream()
+                    .collect(Collectors.groupingBy(LeaveApplication::getStatus, Collectors.counting()));
+
+            // Group by leave type
+            Map<String, Long> leaveTypeCount = applications.stream()
+                    .collect(Collectors.groupingBy(
+                            app -> app.getLeaveType().getName(),
+                            Collectors.counting()));
+
+            // Group by department
+            Map<String, Long> departmentCount = applications.stream()
+                    .collect(Collectors.groupingBy(
+                            app -> app.getUser().getDepartment().getName(),
+                            Collectors.counting()));
+
+            // Create summary DTO
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("totalApplications", applications.size());
+            summary.put("statusCount", statusCount);
+            summary.put("leaveTypeCount", leaveTypeCount);
+            summary.put("departmentCount", departmentCount);
+
+            return ResponseEntity.ok(summary);
+        } catch (Exception e) {
+            logger.error("Error generating summary report", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while generating the report"));
         }
     }
 }

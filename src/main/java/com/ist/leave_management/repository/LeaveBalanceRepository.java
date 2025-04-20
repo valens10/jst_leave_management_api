@@ -1,6 +1,7 @@
 package com.ist.leave_management.repository;
 
 import com.ist.leave_management.model.LeaveBalance;
+import com.ist.leave_management.model.LeaveType;
 import com.ist.user_management.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -20,4 +21,6 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalance, Long
     List<LeaveBalance> findByUser(User user);
 
     void deleteByUser(User user);
+
+    List<LeaveBalance> findByLeaveType(LeaveType leaveType);
 }

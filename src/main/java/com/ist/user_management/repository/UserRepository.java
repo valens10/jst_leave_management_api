@@ -2,6 +2,7 @@ package com.ist.user_management.repository;
 
 import com.ist.user_management.model.User;
 import com.ist.common.enums.ERole;
+import com.ist.leave_management.model.Department;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +21,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :role")
     List<User> findByRole(@Param("role") ERole role);
+
+    List<User> findByDepartment(Department department);
+
+    List<User> findByDepartment_Id(Long departmentId);
 }

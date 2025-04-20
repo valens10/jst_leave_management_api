@@ -10,6 +10,10 @@ public class LeaveBalanceDto {
     private LeaveTypeDto leaveType;
     private Integer balance;
     private LocalDate validUntil;
+    private LocalDate lastAccrualDate;
+    private Integer carriedForwardDays;
+    private Integer expiredDays;
+    private Integer yearlyAccruedDays;
 }
 
 @Data

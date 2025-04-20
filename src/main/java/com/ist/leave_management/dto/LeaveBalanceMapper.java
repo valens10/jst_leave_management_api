@@ -41,6 +41,11 @@ public class LeaveBalanceMapper {
 
         dto.setBalance(leaveBalance.getBalance());
         dto.setValidUntil(leaveBalance.getValidUntil());
+        dto.setLastAccrualDate(leaveBalance.getLastAccrualDate());
+        dto.setCarriedForwardDays(leaveBalance.getCarriedForwardDays());
+        dto.setExpiredDays(leaveBalance.getExpiredDays());
+        dto.setYearlyAccruedDays(leaveBalance.getYearlyAccruedDays());
+
         return dto;
     }
 }

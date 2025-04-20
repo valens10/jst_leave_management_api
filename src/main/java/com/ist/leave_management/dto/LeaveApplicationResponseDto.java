@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class LeaveApplicationResponseDto {
     private Long id;
-    private User user;
+    private LeaveApplicationUserDto user;
     private Long leaveTypeId;
     private String leaveTypeName;
     private LeaveType leaveType;

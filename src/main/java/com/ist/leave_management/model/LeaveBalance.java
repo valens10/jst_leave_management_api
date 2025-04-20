@@ -34,6 +34,19 @@ public class LeaveBalance {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // New fields for auto-accrual and carry-forward
+    @Column(name = "last_accrual_date")
+    private LocalDate lastAccrualDate;
+
+    @Column(name = "carried_forward_days")
+    private Integer carriedForwardDays = 0;
+
+    @Column(name = "expired_days")
+    private Integer expiredDays = 0;
+
+    @Column(name = "yearly_accrued_days")
+    private Integer yearlyAccruedDays = 0;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -41,6 +54,9 @@ public class LeaveBalance {
         if (validUntil == null) {
             // Set to last day of current year
             validUntil = LocalDate.now().withMonth(12).withDayOfMonth(31);
+        }
+        if (lastAccrualDate == null) {
+            lastAccrualDate = LocalDate.now();
         }
     }
 

@@ -143,6 +143,18 @@ public class NotificationService {
         createNotification(recipient, subject, content, "new_leave_application");
     }
 
+    public void sendLeaveBalanceCarryForwardNotification(User user, int carriedForwardDays, int expiredDays) {
+        // TODO: Implement notification logic (email, in-app notification, etc.)
+        String message = String.format(
+                "Your leave balance has been processed for the year-end. " +
+                        "%d days have been carried forward to next year. " +
+                        "%d days have expired.",
+                carriedForwardDays,
+                expiredDays);
+        // Send notification to user
+        System.out.println("Notification sent to " + user.getEmail() + ": " + message);
+    }
+
     private void sendEmail(String toEmail, String subject, String content) {
         Email from = new Email(fromEmail);
         Email to = new Email(toEmail);
