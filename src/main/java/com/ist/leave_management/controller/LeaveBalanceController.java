@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/api/leaves/balance/leave-balances")
+@RequestMapping("/api/leave-balances")
 public class LeaveBalanceController {
     private static final Logger logger = LoggerFactory.getLogger(LeaveBalanceController.class);
 
@@ -163,6 +163,38 @@ public class LeaveBalanceController {
             logger.error("Error getting user's leave balances", e);
             return ResponseEntity.internalServerError()
                     .body(new MessageResponseDto("An error occurred while fetching leave balances"));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteLeaveBalance(@PathVariable Long id, Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            // Check if the current user is an admin
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            boolean isAdmin = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()));
+
+            if (!isAdmin) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("Only admins can delete leave balances"));
+            }
+
+            LeaveBalance balance = leaveBalanceRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Leave balance not found"));
+
+            leaveBalanceRepository.delete(balance);
+            return ResponseEntity.ok(new MessageResponseDto("Leave balance deleted successfully"));
+        } catch (RuntimeException e) {
+            logger.error("Error deleting leave balance: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponseDto(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error deleting leave balance", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while deleting the leave balance"));
         }
     }
 }

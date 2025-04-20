@@ -224,8 +224,35 @@ public class LeaveController {
         }
     }
 
-    @PutMapping("/workflows/{id}/approve")
-    public ResponseEntity<?> approveWorkflow(@PathVariable Long id, @RequestBody WorkflowActionDto actionDto,
+    @GetMapping("/pending/count")
+    public ResponseEntity<?> getPendingLeavesCount(Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            // Check if the current user is an admin or manager
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            boolean isAdminOrManager = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
+                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
+
+            if (!isAdminOrManager) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("Only admins and managers can view pending leaves count"));
+            }
+
+            long count = leaveApplicationRepository.findByStatus(LeaveStatus.PENDING).size();
+            return ResponseEntity.ok(new CountResponseDto(count));
+        } catch (Exception e) {
+            logger.error("Error getting pending leaves count", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while fetching pending leaves count"));
+        }
+    }
+
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<?> approveLeave(@PathVariable Long id, @RequestBody WorkflowActionDto actionDto,
             Authentication authentication) {
         try {
             if (authentication == null) {
@@ -240,41 +267,44 @@ public class LeaveController {
 
             if (!isAdminOrManager) {
                 return ResponseEntity.status(403)
-                        .body(new MessageResponseDto("Only admins and managers can approve workflows"));
+                        .body(new MessageResponseDto("Only admins and managers can approve leaves"));
             }
 
             var approver = userRepository.findById(currentUser.getId())
                     .orElseThrow(() -> new RuntimeException("Approver not found"));
 
-            LeaveWorkflow workflow = leaveWorkflowRepository.findById(id)
+            LeaveApplication leaveApplication = leaveApplicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Leave application not found"));
+
+            LeaveWorkflow workflow = leaveWorkflowRepository.findByLeaveApplication(leaveApplication)
                     .orElseThrow(() -> new RuntimeException("Workflow not found"));
 
             if (workflow.getStatus() != LeaveWorkflowStatus.PENDING) {
                 return ResponseEntity.badRequest()
-                        .body(new MessageResponseDto("Only pending workflows can be approved"));
+                        .body(new MessageResponseDto("Only pending leaves can be approved"));
             }
 
             workflow = leaveWorkflowService.approveLeave(workflow, approver, actionDto.getComments());
 
             // Send notification to the applicant
             notificationService.sendLeaveApprovalNotification(
-                    workflow.getLeaveApplication().getUser(),
-                    workflow.getLeaveApplication(),
+                    leaveApplication.getUser(),
+                    leaveApplication,
                     approver);
 
             return ResponseEntity.ok(leaveWorkflowMapper.toDto(workflow));
         } catch (RuntimeException e) {
-            logger.error("Error approving workflow: {}", e.getMessage());
+            logger.error("Error approving leave: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new MessageResponseDto(e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error approving workflow", e);
+            logger.error("Error approving leave", e);
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponseDto("An error occurred while approving the workflow"));
+                    .body(new MessageResponseDto("An error occurred while approving the leave"));
         }
     }
 
-    @PutMapping("/workflows/{id}/reject")
-    public ResponseEntity<?> rejectWorkflow(@PathVariable Long id, @RequestBody WorkflowActionDto actionDto,
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<?> rejectLeave(@PathVariable Long id, @RequestBody WorkflowActionDto actionDto,
             Authentication authentication) {
         try {
             if (authentication == null) {
@@ -289,47 +319,46 @@ public class LeaveController {
 
             if (!isAdminOrManager) {
                 return ResponseEntity.status(403)
-                        .body(new MessageResponseDto("Only admins and managers can reject workflows"));
+                        .body(new MessageResponseDto("Only admins and managers can reject leaves"));
             }
 
             var rejector = userRepository.findById(currentUser.getId())
                     .orElseThrow(() -> new RuntimeException("Rejector not found"));
 
-            LeaveWorkflow workflow = leaveWorkflowRepository.findById(id)
+            LeaveApplication leaveApplication = leaveApplicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Leave application not found"));
+
+            LeaveWorkflow workflow = leaveWorkflowRepository.findByLeaveApplication(leaveApplication)
                     .orElseThrow(() -> new RuntimeException("Workflow not found"));
 
             if (workflow.getStatus() != LeaveWorkflowStatus.PENDING) {
                 return ResponseEntity.badRequest()
-                        .body(new MessageResponseDto("Only pending workflows can be rejected"));
+                        .body(new MessageResponseDto("Only pending leaves can be rejected"));
             }
 
             workflow = leaveWorkflowService.rejectLeave(workflow, rejector, actionDto.getComments());
 
             // Send notification to the applicant
             notificationService.sendLeaveRejectionNotification(
-                    workflow.getLeaveApplication().getUser(),
-                    workflow.getLeaveApplication(),
+                    leaveApplication.getUser(),
+                    leaveApplication,
                     rejector,
                     actionDto.getComments());
 
             return ResponseEntity.ok(leaveWorkflowMapper.toDto(workflow));
         } catch (RuntimeException e) {
-            logger.error("Error rejecting workflow: {}", e.getMessage());
+            logger.error("Error rejecting leave: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new MessageResponseDto(e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error rejecting workflow", e);
+            logger.error("Error rejecting leave", e);
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponseDto("An error occurred while rejecting the workflow"));
+                    .body(new MessageResponseDto("An error occurred while rejecting the leave"));
         }
     }
 
     @GetMapping("/attachments/{fileName}")
-    public ResponseEntity<?> downloadAttachment(@PathVariable String fileName, Authentication authentication) {
+    public ResponseEntity<?> downloadAttachment(@PathVariable String fileName) {
         try {
-            if (authentication == null) {
-                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
-            }
-
             // Load file as Resource
             Path filePath = fileStorageService.loadFile(fileName);
             Resource resource = new UrlResource(filePath.toUri());
@@ -341,9 +370,14 @@ public class LeaveController {
             // Determine content type
             String contentType = determineContentType(fileName);
 
+            // Set headers for inline viewing
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            headers.setContentDispositionFormData("inline", fileName);
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
+                    .headers(headers)
                     .body(resource);
         } catch (Exception e) {
             logger.error("Error downloading attachment: {}", e.getMessage());
@@ -468,6 +502,86 @@ public class LeaveController {
             logger.error("Error getting pending workflows", e);
             return ResponseEntity.internalServerError()
                     .body(new MessageResponseDto("An error occurred while fetching pending workflows"));
+        }
+    }
+
+    @GetMapping("/workflows/my-workflows")
+    public ResponseEntity<?> getMyWorkflows(Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            var user = userRepository.findById(currentUser.getId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Get all leave applications for the user
+            List<LeaveApplication> applications = leaveApplicationRepository.findByUser(user);
+
+            // Get workflows for each application
+            List<LeaveWorkflow> workflows = new ArrayList<>();
+            for (LeaveApplication application : applications) {
+                leaveWorkflowRepository.findByLeaveApplication(application)
+                        .ifPresent(workflows::add);
+            }
+
+            List<LeaveWorkflowDto> response = workflows.stream()
+                    .map(leaveWorkflowMapper::toDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            logger.error("Error getting user workflows: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponseDto(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error getting user workflows", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while fetching workflows"));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteLeave(@PathVariable Long id, Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
+            }
+
+            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
+            var user = userRepository.findById(currentUser.getId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            LeaveApplication leaveApplication = leaveApplicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Leave application not found"));
+
+            // Check if the leave belongs to the current user
+            if (!leaveApplication.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("You can only delete your own leave applications"));
+            }
+
+            // Check if the leave is still pending
+            if (leaveApplication.getStatus() != LeaveStatus.PENDING) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponseDto("Only pending leaves can be deleted"));
+            }
+
+            // Delete the workflow if it exists
+            leaveWorkflowRepository.findByLeaveApplication(leaveApplication)
+                    .ifPresent(workflow -> leaveWorkflowRepository.delete(workflow));
+
+            // Delete the leave application
+            leaveApplicationRepository.delete(leaveApplication);
+
+            return ResponseEntity.ok(new MessageResponseDto("Leave application deleted successfully"));
+        } catch (RuntimeException e) {
+            logger.error("Error deleting leave: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponseDto(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error deleting leave", e);
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDto("An error occurred while deleting the leave application"));
         }
     }
 }

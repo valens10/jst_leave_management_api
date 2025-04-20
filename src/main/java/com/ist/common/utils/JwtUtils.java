@@ -39,16 +39,34 @@ public class JwtUtils {
 
     public String generateJwtToken(Authentication authentication) {
         String username;
+        String firstName = null;
+        String lastName = null;
+        String googleId = null;
+        String profilePicture = null;
+
         if (authentication.getPrincipal() instanceof UserDetailsImpl) {
-            username = ((UserDetailsImpl) authentication.getPrincipal()).getUsername();
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            username = userDetails.getUsername();
+            firstName = userDetails.getFirstName();
+            lastName = userDetails.getLastName();
+            profilePicture = userDetails.getProfilePicture();
         } else if (authentication.getPrincipal() instanceof OAuth2User) {
-            username = ((OAuth2User) authentication.getPrincipal()).getAttribute("email");
+            OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
+            username = oauthUser.getAttribute("email");
+            firstName = oauthUser.getAttribute("given_name");
+            lastName = oauthUser.getAttribute("family_name");
+            googleId = oauthUser.getAttribute("sub");
+            profilePicture = oauthUser.getAttribute("picture");
         } else {
             throw new IllegalArgumentException("Unsupported principal type");
         }
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("firstName", firstName)
+                .claim("lastName", lastName)
+                .claim("googleId", googleId)
+                .claim("profilePicture", profilePicture)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -62,6 +80,14 @@ public class JwtUtils {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public Claims getClaimsFromJwtToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public boolean validateJwtToken(String authToken) {

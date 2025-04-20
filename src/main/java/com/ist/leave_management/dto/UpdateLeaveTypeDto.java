@@ -22,4 +22,7 @@ public class UpdateLeaveTypeDto {
 
     @NotNull(message = "Requires approval status is required")
     private Boolean requiresApproval;
+
+    @NotNull(message = "Is annual leave status is required")
+    private Boolean isAnnualLeave;
 }

@@ -9,11 +9,16 @@ import com.ist.user_management.dto.MessageResponseDto;
 import com.ist.user_management.dto.AssignRoleRequestDto;
 import com.ist.user_management.repository.RoleRepository;
 import com.ist.user_management.repository.UserRepository;
+import com.ist.leave_management.repository.LeaveApplicationRepository;
+import com.ist.leave_management.repository.LeaveBalanceRepository;
+import com.ist.leave_management.repository.LeaveWorkflowRepository;
+import com.ist.leave_management.repository.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +35,18 @@ public class UsersController {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private LeaveApplicationRepository leaveApplicationRepository;
+
+    @Autowired
+    private LeaveBalanceRepository leaveBalanceRepository;
+
+    @Autowired
+    private LeaveWorkflowRepository leaveWorkflowRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @GetMapping("/user_details")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
@@ -144,34 +161,54 @@ public class UsersController {
     }
 
     @DeleteMapping("/{userId}")
+    @Transactional
     public ResponseEntity<?> deleteUser(@PathVariable Long userId, Authentication authentication) {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
             }
 
-            // Check if the current user is an admin
+            // Check if the current user is an admin or manager
             UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
-            boolean isAdmin = currentUser.getAuthorities().stream()
-                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()));
+            boolean isAdminOrManager = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
+                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
 
-            if (!isAdmin) {
-                return ResponseEntity.status(403).body(new MessageResponseDto("Only admins can delete users"));
+            if (!isAdminOrManager) {
+                return ResponseEntity.status(403)
+                        .body(new MessageResponseDto("Only admins and managers can delete users"));
             }
 
             // Check if user exists
-            if (!userRepository.existsById(userId)) {
-                return ResponseEntity.badRequest().body(new MessageResponseDto("User not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            try {
+                // 1. Delete workflows where user is approver/rejector
+                leaveWorkflowRepository.deleteByApprovedByOrRejectedBy(user, user);
+
+                // 2. Delete notifications
+                notificationRepository.deleteByUser(user);
+
+                // 3. Delete leave applications
+                leaveApplicationRepository.deleteByUser(user);
+
+                // 4. Delete leave balances
+                leaveBalanceRepository.deleteByUser(user);
+
+                // 5. Finally delete the user
+                userRepository.delete(user);
+
+                return ResponseEntity.ok(new MessageResponseDto("User deleted successfully"));
+            } catch (Exception e) {
+                logger.error("Error during user deletion process", e);
+                return ResponseEntity.internalServerError()
+                        .body(new MessageResponseDto("Error during user deletion: " + e.getMessage()));
             }
-
-            // Delete the user
-            userRepository.deleteById(userId);
-
-            return ResponseEntity.ok(new MessageResponseDto("User deleted successfully"));
         } catch (Exception e) {
-            logger.error("Error deleting user", e);
+            logger.error("Error in deleteUser endpoint", e);
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponseDto("An error occurred while deleting the user"));
+                    .body(new MessageResponseDto("An error occurred while processing the request"));
         }
     }
 

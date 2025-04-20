@@ -32,6 +32,9 @@ public class LeaveType {
     @Column(nullable = false)
     private Boolean requiresApproval;
 
+    @Column(nullable = false)
+    private Boolean isAnnualLeave = false;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

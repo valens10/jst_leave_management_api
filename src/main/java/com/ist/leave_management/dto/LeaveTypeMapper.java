@@ -12,6 +12,7 @@ public class LeaveTypeMapper {
         leaveType.setMaxDays(dto.getMaxDays());
         leaveType.setPaid(dto.getIsPaid());
         leaveType.setRequiresApproval(dto.getRequiresApproval());
+        leaveType.setIsAnnualLeave(dto.getIsAnnualLeave());
         leaveType.setCreatedAt(java.time.LocalDateTime.now());
         leaveType.setUpdatedAt(java.time.LocalDateTime.now());
         return leaveType;
@@ -23,6 +24,7 @@ public class LeaveTypeMapper {
         leaveType.setMaxDays(dto.getMaxDays());
         leaveType.setPaid(dto.getIsPaid());
         leaveType.setRequiresApproval(dto.getRequiresApproval());
+        leaveType.setIsAnnualLeave(dto.getIsAnnualLeave());
         return leaveType;
     }
 
@@ -34,6 +36,7 @@ public class LeaveTypeMapper {
         dto.setMaxDays(leaveType.getMaxDays());
         dto.setIsPaid(leaveType.getPaid());
         dto.setRequiresApproval(leaveType.getRequiresApproval());
+        dto.setIsAnnualLeave(leaveType.getIsAnnualLeave());
         dto.setCreatedAt(leaveType.getCreatedAt());
         dto.setUpdatedAt(leaveType.getUpdatedAt());
         return dto;

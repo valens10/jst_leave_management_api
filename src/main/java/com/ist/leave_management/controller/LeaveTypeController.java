@@ -34,17 +34,6 @@ public class LeaveTypeController {
                 return ResponseEntity.status(401).body(new MessageResponseDto("Authentication required"));
             }
 
-            // Check if the current user is an admin or manager
-            UserDetailsImpl currentUser = (UserDetailsImpl) authentication.getPrincipal();
-            boolean isAdminOrManager = currentUser.getAuthorities().stream()
-                    .anyMatch(auth -> auth.getAuthority().equals(ERole.ROLE_ADMIN.name()) ||
-                            auth.getAuthority().equals(ERole.ROLE_MANAGER.name()));
-
-            if (!isAdminOrManager) {
-                return ResponseEntity.status(403)
-                        .body(new MessageResponseDto("Only admins and managers can view leave types"));
-            }
-
             List<LeaveType> leaveTypes = leaveTypeRepository.findAll();
             List<LeaveTypeResponseDto> response = leaveTypes.stream()
                     .map(leaveTypeMapper::toDto)

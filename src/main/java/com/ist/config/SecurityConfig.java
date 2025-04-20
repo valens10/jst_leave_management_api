@@ -80,19 +80,26 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/auth/**",
-                                "/api/auth/oauth2/callback/**", // Allow this endpoint
+                                "/api/auth/oauth2/callback/**",
                                 "/api/test/**",
                                 "/login/oauth2/code/**",
-                                "/oauth2/authorization/**")
+                                "/oauth2/authorization/**",
+                                "/api/leaves/attachments/**")
                         .permitAll()
-                        // Protected API
-                        .requestMatchers("/api/leaves/**").authenticated()
-                        // Everything else secured
+                        // Protected API endpoints
+                        .requestMatchers(
+                                "/api/leaves/**",
+                                "/api/leave-balances/**",
+                                "/api/users/**")
+                        .authenticated()
+                        // Everything else requires authentication
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(401);
-                            response.getWriter().write("Unauthorized: " + authException.getMessage());
+                            response.setContentType("application/json");
+                            response.getWriter().write(
+                                    "{\"error\":\"Unauthorized\",\"message\":\"Full authentication is required to access this resource\"}");
                         }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class)
@@ -102,19 +109,14 @@ public class SecurityConfig {
                                 .authorizationRequestRepository(new HttpSessionOAuth2AuthorizationRequestRepository()))
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler((request, response, authentication) -> {
-                            // Get the old token from the Authorization header if it exists
-                            String oldToken = request.getHeader("Authorization");
-                            if (oldToken != null && oldToken.startsWith("Bearer ")) {
-                                oldToken = oldToken.substring(7);
-                                jwtUtils.invalidateToken(oldToken);
-                            }
-
                             String token = jwtUtils.generateJwtToken(authentication);
                             response.sendRedirect(frontendUrl + "/oauth2/success?token=" + token);
                         })
                         .failureHandler((request, response, exception) -> {
                             response.setStatus(401);
-                            response.getWriter().write("OAuth2 Login Failed: " + exception.getMessage());
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"OAuth2 Login Failed\",\"message\":\""
+                                    + exception.getMessage() + "\"}");
                         }));
 
         return http.build();
@@ -123,10 +125,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200")); // Update with frontend URL
+        configuration.setAllowedOrigins(Arrays.asList(frontendUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

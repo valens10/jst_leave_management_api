@@ -4,11 +4,15 @@ import com.ist.leave_management.model.LeaveApplication;
 import com.ist.leave_management.model.LeaveWorkflow;
 import com.ist.leave_management.model.LeaveWorkflowStatus;
 import com.ist.leave_management.model.LeaveStatus;
+import com.ist.leave_management.model.LeaveBalance;
 import com.ist.user_management.model.User;
 import com.ist.leave_management.repository.LeaveWorkflowRepository;
 import com.ist.leave_management.repository.LeaveApplicationRepository;
 import com.ist.user_management.repository.UserRepository;
 import com.ist.common.enums.ERole;
+import com.ist.leave_management.repository.LeaveBalanceRepository;
+import com.ist.leave_management.model.Holiday;
+import com.ist.leave_management.repository.HolidayRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +33,12 @@ public class LeaveWorkflowService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private LeaveBalanceRepository leaveBalanceRepository;
+
+    @Autowired
+    private HolidayRepository holidayRepository;
 
     @Transactional
     public LeaveWorkflow createWorkflow(LeaveApplication leaveApplication) {
@@ -64,6 +74,11 @@ public class LeaveWorkflowService {
         LeaveApplication application = workflow.getLeaveApplication();
         application.setStatus(LeaveStatus.APPROVED);
         leaveApplicationRepository.save(application);
+
+        // If this is an annual leave, update the leave balance
+        if (application.getLeaveType().getIsAnnualLeave()) {
+            updateAnnualLeaveBalance(application);
+        }
 
         return leaveWorkflowRepository.save(workflow);
     }
@@ -108,5 +123,50 @@ public class LeaveWorkflowService {
                     leaveApplication,
                     leaveApplication.getUser());
         }
+    }
+
+    private void updateAnnualLeaveBalance(LeaveApplication application) {
+        // Get the user's leave balance for annual leave
+        LeaveBalance leaveBalance = leaveBalanceRepository.findByUserIdAndLeaveTypeId(
+                application.getUser().getId(),
+                application.getLeaveType().getId())
+                .orElseThrow(() -> new RuntimeException("Leave balance not found for user"));
+
+        // Calculate days to subtract
+        int daysToSubtract;
+        if (application.getIsHalfDay()) {
+            daysToSubtract = 1; // Half day counts as 1 day
+        } else {
+            // Get all holidays between start and end date
+            List<Holiday> holidays = holidayRepository.findByDateBetween(
+                    application.getStartDate(),
+                    application.getEndDate());
+
+            // Calculate working days (excluding weekends and holidays)
+            daysToSubtract = 0;
+            LocalDate currentDate = application.getStartDate();
+            while (!currentDate.isAfter(application.getEndDate())) {
+                final LocalDate dateToCheck = currentDate; // Create effectively final variable
+                // Skip weekends (Saturday and Sunday)
+                if (dateToCheck.getDayOfWeek().getValue() < 6) {
+                    // Skip holidays
+                    boolean isHoliday = holidays.stream()
+                            .anyMatch(h -> h.getDate().equals(dateToCheck));
+                    if (!isHoliday) {
+                        daysToSubtract++;
+                    }
+                }
+                currentDate = currentDate.plusDays(1);
+            }
+        }
+
+        // Check if user has enough balance
+        if (leaveBalance.getBalance() < daysToSubtract) {
+            throw new RuntimeException("Insufficient leave balance");
+        }
+
+        // Update the balance
+        leaveBalance.setBalance(leaveBalance.getBalance() - daysToSubtract);
+        leaveBalanceRepository.save(leaveBalance);
     }
 }

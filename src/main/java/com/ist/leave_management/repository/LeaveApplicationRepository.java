@@ -2,6 +2,7 @@ package com.ist.leave_management.repository;
 
 import com.ist.leave_management.model.LeaveApplication;
 import com.ist.leave_management.model.LeaveStatus;
+import com.ist.user_management.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +13,10 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
     List<LeaveApplication> findByUserId(Long userId);
 
     List<LeaveApplication> findByStatus(LeaveStatus status);
+
+    List<LeaveApplication> findByUser(User user);
+
+    void deleteByUser(User user);
+
+    long countByStatus(LeaveStatus status);
 }

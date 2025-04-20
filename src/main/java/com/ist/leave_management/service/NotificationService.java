@@ -51,7 +51,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<NotificationDto> getUserNotifications(User user) {
-        return notificationRepository.findByUser(user)
+        return notificationRepository.findByUserAndIsReadFalse(user)
                 .stream()
                 .map(notificationMapper::toDto)
                 .collect(Collectors.toList());
