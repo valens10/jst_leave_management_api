@@ -1,223 +1,173 @@
-# Leave Management System
+# 🛡️ Leave Management System - Backend
 
-A comprehensive leave management system built with Spring Boot and React, designed to streamline employee leave requests and approvals according to Rwandan Labor Law (2023).
+A robust and scalable backend for a **Leave Management System**, built using **Spring Boot** and aligned with **Rwandan Labor Law (2023)**. The system handles leave requests, balances, approvals, and HR workflows.
 
-## Features
+---
 
-### Core Features
-- **Employee Dashboard**
-  - View leave balances
-  - Apply for leave
-  - Track leave history
-  - Upload supporting documents
-  - Calendar integration with public holidays and team leaves
+## ✨ Key Features
 
-- **Leave Application**
-  - Multiple leave types (PTO, Sick, Compassionate, Maternity)
-  - Full-day/half-day options
-  - Document upload support
-  - Application status tracking
+- ✅ **Leave Application**
+  - leave types (Annual, Sick, Maternity, Compassionate, etc)
+  - Full-day and half-day support
+  - Document uploads
 
-- **Approval Workflow**
-  - Manager/Admin approval process
-  - Email and in-app notifications
-  - Approval/rejection with comments
+- 🔁 **Approval Workflow**
+  - Manager/admin approvals with comments
+  - Notifications
 
-- **Leave Balance Management**
+- 📊 **Dashboard & Reports**
+  - Employee leave summaries
+  - Admin calendar view
+  - Exportable leave reports
+
+- ⚙️ **Leave Balance Management**
   - Auto-accrual (1.66 days/month)
-  - Carry-forward logic (max 5 days)
-  - Manual balance adjustments
+  - Max carry forward (5 days)
+  - Manual adjustment via Admin Panel
 
-- **Admin Panel**
-  - Leave type management
-  - Balance adjustments
-  - Team calendar views
-  - Report generation and export
-
-- **Notifications**
-  - Email notifications
+- 🔔 **Notifications**
+  - Email via SendGrid
   - In-app notifications
-  - Real-time status updates
 
-## Tech Stack
+- 🔐 **Authentication & Security**
+  - JWT authentication
+  - Google OAuth2 (can be replaced with Microsoft Auth in future(Production))
+  - Role-based access control
 
-### Backend
-- Java 17
-- Spring Boot 3.x
-- Spring Security with JWT
-- Spring Data JPA
-- PostgreSQL
-- SendGrid for email notifications
-- Microsoft OAuth2 Authentication
+---
 
-### Frontend
-- React
-- Material-UI
-- Redux Toolkit
-- Axios
-- React Router
+## 🛠️ Tech Stack
 
-## Prerequisites
+- **Java**
+- **Spring Boot**
+- **Spring Security (JWT + OAuth2)**
+- **Spring Data JPA**
+- **PostgreSQL**
+- **SendGrid API**
+- **Docker & Docker Compose**
 
-- Docker and Docker Compose
-- Java 17 JDK
-- Node.js 18+
-- npm or yarn
+---
 
-## Quick Start with Docker
+## 📁 Project Structure
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/leave-management.git
-cd leave-management
+├── src/
+│   ├── main/java/com/valens/lms/
+│   │   ├── leave_manment/
+│   │   ├── user_manament/
+│   │   └── config/
+│   └── resources/
+│       ├── application.yml
+│       └── static/
+├── .env.example
+├── Dockerfile.backend
+└── docker-compose.yml
+
+-- XX
 ```
 
-2. Create environment files:
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
 ```bash
-# Backend (.env)
-cp backend/.env.example backend/.env
-# Frontend (.env)
-cp frontend/.env.example frontend/.env
+git clone https://github.com/valens10/jst_leave_management_api.git
+cd jst_leave_management_api
 ```
 
-3. Update environment variables:
+### 2. Create Environment File
+
 ```bash
-# Backend (.env)
+cp .env.example .env
+```
+
+Edit `.env` with your local or Docker configuration:
+
+```env
 POSTGRES_URL=jdbc:postgresql://postgres:5432/leave_management
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_secure_password
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRATION=86400000
 SENDGRID_API_KEY=your_sendgrid_key
-SENDGRIS_FROM_EMAIL=your_verified_email
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
+SENDGRID_FROM_EMAIL=your_verified_email
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/oauth2/callback/google
 FRONTEND_URL=http://localhost:4200
-
-# Frontend (.env)
-REACT_APP_API_URL=http://localhost:8080
-REACT_APP_GOOGLE_CLIENT_ID=your_client_id
 ```
 
-4. Start the application:
+---
+
+## 🐳 Run with Docker Compose
+
+### 🔧 Build & Start All Services
+
 ```bash
-docker-compose up -d
+docker-compose up --build -d
 ```
 
-The application will be available at:
-- Frontend: http://localhost:4200
-- Backend API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui.html
+- Backend API: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
 
-## Manual Setup
+---
 
-### Backend Setup
+## 📚 API Documentation
 
-1. Navigate to backend directory:
+Access detailed interactive documentation:
+
+- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+---
+
+## 🔐 Security Overview
+
+- ✅ JWT Authentication
+- ✅ OAuth2 via Google
+- ✅ Role-Based Access (Admin, Staff, Manager)
+- ✅ CORS whitelist setup
+
+---
+
+## 📦 Manual Build (Without Docker)
+
 ```bash
-cd backend
-```
+# Build Spring Boot app
+.\mvnw.cmd spring-boot:run
+Ensure PostgreSQL is running and configured to match the `.env` or `application.yml`.
 
-2. Build the application:
-```bash
-./mvnw clean package
-```
+---
 
-3. Run the application:
-```bash
-java -jar target/leave-management-0.0.1-SNAPSHOT.jar
-```
+## 📂 Database Schema Overview
 
-### Frontend Setup
+Main tables include:
 
-1. Navigate to frontend directory:
-```bash
-cd frontend
-```
+- `users`
+- `roles`
+- `leave_applications`
+- `leave_balances`
+- `leave_types`
+- `notifications`
+- `approval_workflows`
+- etc
 
-2. Install dependencies:
-```bash
-npm install
-```
+---
 
-3. Start the development server:
-```bash
-npm start
-```
+## 🚢 Deployment & Production Tips
 
-## API Documentation
+1. Set environment variables for production
+3. Harden your `application.yml`
+5. Set up automatic backups (PostgreSQL)
 
-The API documentation is available at:
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- OpenAPI JSON: http://localhost:8080/v3/api-docs
+---
 
-## Security Features
+## 🤝 Contributing
 
-- JWT-based authentication
-- Google OAuth2 integration
-- Role-based access control
-- CSRF protection
-- CORS configuration
-
-## Database Schema
-
-The system uses PostgreSQL with the following main tables:
-- users
-- roles
-- leave_types
-- leave_applications
-- leave_balances
-- leave_workflows
-- notifications
-
-## Testing
-
-### Backend Tests
-```bash
-cd backend
-./mvnw test
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm test
-```
-
-## Deployment
-
-### Docker Deployment
-1. Build the images:
-```bash
-docker-compose build
-```
-
-2. Push to Docker Hub:
-```bash
-docker push yourusername/leave-management-backend:latest
-docker push yourusername/leave-management-frontend:latest
-```
-
-### Production Deployment
-1. Update environment variables for production
-2. Use HTTPS
-3. Configure proper CORS settings
-4. Set up proper logging
-5. Configure backup strategy
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
+1. Fork this repository
+2. Create a feature branch
 3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+4. Open a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support, please contact [your-email@example.com] 
+---
