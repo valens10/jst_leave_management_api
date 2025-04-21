@@ -45,7 +45,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/oauth2/authorization") ||
+        return path.startsWith("/swagger-ui") ||
+                path.startsWith("/v3/api-docs") ||
+                path.equals("/swagger-ui.html") ||
+                path.startsWith("/oauth2/authorization") ||
                 path.startsWith("/login/oauth2/code") ||
                 path.startsWith("/api/auth/oauth2/callback") ||
                 path.startsWith("/api/leaves/attachments/");
@@ -76,11 +79,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 newUser.setGoogleId(claims.get("googleId", String.class));
                                 newUser.setProfilePicture(claims.get("profilePicture", String.class));
 
-                                // Set default STAFF role
-                                Role userRole = roleRepository.findByName(ERole.ROLE_STAFF)
-                                        .orElseThrow(() -> new RuntimeException("Error: Role STAFF is not found."));
-                                newUser.setRoles(Collections.singleton(userRole));
+                                // Determine role based on whether this is the first user
+                                Role userRole;
+                                if (userRepository.count() == 0) {
+                                    logger.info("First user detected, assigning ROLE_ADMIN");
+                                    userRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                                            .orElseThrow(() -> new RuntimeException("Error: Role ADMIN is not found."));
+                                } else {
+                                    userRole = roleRepository.findByName(ERole.ROLE_STAFF)
+                                            .orElseThrow(() -> new RuntimeException("Error: Role STAFF is not found."));
+                                }
 
+                                newUser.setRoles(Collections.singleton(userRole));
                                 return userRepository.save(newUser);
                             });
 
